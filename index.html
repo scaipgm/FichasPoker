@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker Chip & Action Manager</title>
+    <title>Poker Chip & Action Manager - Local</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .felt-bg { background: radial-gradient(circle, #064e3b 0%, #022c22 100%); }
@@ -11,11 +11,11 @@
 </head>
 <body class="bg-gray-950 text-gray-100 font-sans min-h-screen flex flex-col justify-between">
 
-    <!-- HEADER / LOBBY STATUS -->
+    <!-- HEADER -->
     <header class="bg-gray-900 border-b border-gray-800 p-4 flex justify-between items-center shadow-lg">
         <div class="flex items-center space-x-3">
             <span class="text-2xl">🃏</span>
-            <h1 class="font-bold text-lg text-emerald-400">Poker Chip Live</h1>
+            <h1 class="font-bold text-lg text-emerald-400">Poker Local - Gestor de Fichas</h1>
         </div>
         <div id="room-info" class="hidden flex items-center space-x-4 text-sm">
             <span class="bg-gray-800 px-3 py-1 rounded-full border border-gray-700">Sala: <strong id="lbl-room" class="text-emerald-400"></strong></span>
@@ -29,7 +29,7 @@
 
         <!-- LOBBY SCREEN -->
         <div id="screen-lobby" class="max-w-md mx-auto bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl mt-10">
-            <h2 class="text-xl font-bold text-center mb-6 text-emerald-400">Gestor de Fichas de Poker</h2>
+            <h2 class="text-xl font-bold text-center mb-6 text-emerald-400">Configuración de Partida</h2>
             
             <div class="space-y-4">
                 <div>
@@ -41,16 +41,17 @@
                     <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Fichas Iniciales (Buy-in)</label>
                     <select id="select-buyin" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500">
                         <option value="50">50 Fichas</option>
-                        <option value="100" selected>100 Fichas</option>
+                        <option value="100">100 Fichas</option>
                         <option value="200">200 Fichas</option>
-                        <option value="500">500 Fichas</option>
+                        <option value="500" selected>500 Fichas</option>
                         <option value="1000">1000 Fichas</option>
+                        <option value="2500">2500 Fichas</option>
                         <option value="5000">5000 Fichas</option>
                     </select>
                 </div>
 
                 <div class="pt-4 border-t border-gray-800 flex flex-col space-y-3">
-                    <button onclick="createRoom()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-3 rounded-lg shadow transition">Crear Nueva Sala</button>
+                    <button onclick="createRoom()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-3 rounded-lg shadow transition">Crear Mesa Local</button>
                     <div class="flex space-x-2">
                         <input type="text" id="input-room-code" placeholder="Código de Sala" class="w-1/2 bg-gray-950 border border-gray-700 rounded-lg p-3 text-white uppercase tracking-widest text-center focus:outline-none focus:border-emerald-500">
                         <button onclick="joinRoom()" class="w-1/2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-emerald-500/50 font-bold p-3 rounded-lg shadow transition">Unirse</button>
@@ -59,12 +60,12 @@
             </div>
         </div>
 
-        <!-- GAME INTERFACE (HIDDEN BY DEFAULT) -->
+        <!-- GAME INTERFACE -->
         <div id="screen-game" class="hidden space-y-6">
             
             <!-- MODE SWITCHER TABS -->
             <div class="flex justify-center space-x-2 bg-gray-900 p-1.5 rounded-xl border border-gray-800 max-w-md mx-auto">
-                <button onclick="switchMode('table')" id="btn-mode-table" class="flex-1 py-2 px-4 rounded-lg font-bold text-sm bg-emerald-600 text-white transition">🟢 Modo Mesa</button>
+                <button onclick="switchMode('table')" id="btn-mode-table" class="flex-1 py-2 px-4 rounded-lg font-bold text-sm bg-emerald-600 text-white transition">🟢 Modo Mesa & Asientos</button>
                 <button onclick="switchMode('chips')" id="btn-mode-chips" class="flex-1 py-2 px-4 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition">🪙 Modo Fichas & Acciones</button>
             </div>
 
@@ -76,12 +77,10 @@
                 </div>
 
                 <!-- PLAYERS SEATS GRID -->
-                <div id="table-seats" class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full my-6">
-                    <!-- Generado dinámicamente -->
-                </div>
+                <div id="table-seats" class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full my-6"></div>
 
                 <div class="text-center text-xs text-emerald-200/60 bg-black/30 px-4 py-1.5 rounded-lg">
-                    ℹ️ Las cartas se reparten de forma presencial. Esta pantalla lleva el control de ciegas, apuestas y fichas.
+                    ℹ️ Las cartas se reparten presencialmente. Esta pantalla lleva el control absoluto de apuestas y ciegas en tiempo real.
                 </div>
             </div>
 
@@ -90,7 +89,7 @@
                 <div class="flex justify-between items-center border-b border-gray-800 pb-4">
                     <div>
                         <p class="text-xs uppercase text-gray-400">Tus Fichas Actuales (Stack)</p>
-                        <p id="my-chips-display" class="text-3xl font-black text-emerald-400">100</p>
+                        <p id="my-chips-display" class="text-3xl font-black text-emerald-400">0</p>
                     </div>
                     <div>
                         <p class="text-xs uppercase text-gray-400">Tu Apuesta Actual</p>
@@ -108,16 +107,14 @@
 
                 <!-- RAISE CONTROLS -->
                 <div class="flex space-x-2 pt-2">
-                    <input type="number" id="raise-amount" value="10" min="1" class="w-2/3 bg-gray-950 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500">
+                    <input type="number" id="raise-amount" value="50" min="1" class="w-2/3 bg-gray-950 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500">
                     <button onclick="playerAction('raise')" class="w-1/3 bg-emerald-600 hover:bg-emerald-500 font-bold p-3 rounded-lg text-white transition">Subir (Raise)</button>
                 </div>
 
                 <!-- PLAYER LIST -->
                 <div class="border-t border-gray-800 pt-4">
-                    <h3 class="text-sm font-bold text-gray-400 mb-3">Estado de la Mesa en Tiempo Real</h3>
-                    <div id="players-list-chips" class="space-y-2">
-                        <!-- Generado dinámicamente -->
-                    </div>
+                    <h3 class="text-sm font-bold text-gray-400 mb-3">Estado de Jugadores</h3>
+                    <div id="players-list-chips" class="space-y-2"></div>
                 </div>
             </div>
 
@@ -125,19 +122,15 @@
 
     </main>
 
-    <!-- FOOTER SCRIPT DE SINCRONIZACIÓN -->
+    <!-- SCRIPT DE CONTROL LOCAL -->
     <script>
         let gameState = {
-            roomCode: null,
+            roomCode: "MESA-01",
             playerName: null,
-            buyIn: 100,
+            buyIn: 500,
             players: [],
             pot: 0
         };
-
-        function generateCode() {
-            return Math.random().toString(36.substring(2, 6)).toUpperCase().slice(-4);
-        }
 
         function createRoom() {
             const name = document.getElementById('input-name').value.trim();
@@ -145,7 +138,7 @@
             
             gameState.playerName = name;
             gameState.buyIn = parseInt(document.getElementById('select-buyin').value);
-            gameState.roomCode = "MESA-" + generateCode();
+            gameState.roomCode = "MESA-" + Math.floor(1000 + Math.random() * 9000);
             
             gameState.players = [{
                 name: name,
@@ -165,24 +158,23 @@
             gameState.playerName = name;
             gameState.roomCode = code;
 
-            let loaded = localStorage.getItem('poker_room_' + code);
+            let loaded = localStorage.getItem('poker_local_' + code);
             if (loaded) {
                 gameState = JSON.parse(loaded);
-                // Chequear si ya está
                 let existing = gameState.players.find(p => p.name === name);
                 if (!existing) {
-                    gameState.players.push({ name: name, chips: gameState.buyIn || 100, bet: 0, status: 'Activo' });
+                    gameState.players.push({ name: name, chips: gameState.buyIn || 500, bet: 0, status: 'Activo' });
                 }
             } else {
-                gameState.buyIn = 100;
-                gameState.players = [{ name: name, chips: 100, bet: 0, status: 'Activo' }];
+                gameState.buyIn = 500;
+                gameState.players = [{ name: name, chips: 500, bet: 0, status: 'Activo' }];
             }
 
             saveAndEnter();
         }
 
         function saveAndEnter() {
-            localStorage.setItem('poker_room_' + gameState.roomCode, JSON.stringify(gameState));
+            localStorage.setItem('poker_local_' + gameState.roomCode, JSON.stringify(gameState));
             
             document.getElementById('screen-lobby').classList.add('hidden');
             document.getElementById('screen-game').classList.remove('hidden');
@@ -192,12 +184,12 @@
             document.getElementById('lbl-player').innerText = gameState.playerName;
 
             updateUI();
-            setInterval(pollRoom, 1000); // Sincronización en vivo local
+            setInterval(pollRoom, 800); // Actualización automática local
         }
 
         function pollRoom() {
             if (!gameState.roomCode) return;
-            let loaded = localStorage.getItem('poker_room_' + gameState.roomCode);
+            let loaded = localStorage.getItem('poker_local_' + gameState.roomCode);
             if (loaded) {
                 gameState = JSON.parse(loaded);
                 updateUI();
@@ -205,7 +197,7 @@
         }
 
         function syncAndSave() {
-            localStorage.setItem('poker_room_' + gameState.roomCode, JSON.stringify(gameState));
+            localStorage.setItem('poker_local_' + gameState.roomCode, JSON.stringify(gameState));
             updateUI();
         }
 
@@ -227,7 +219,7 @@
             let p = gameState.players.find(x => x.name === gameState.playerName);
             if (!p) return;
 
-            let raiseVal = parseInt(document.getElementById('raise-amount').value) || 10;
+            let raiseVal = parseInt(document.getElementById('raise-amount').value) || 50;
 
             if (action === 'fold') {
                 p.status = 'Retirado (Fold)';
@@ -241,7 +233,7 @@
                 p.chips = 0;
                 p.status = '🔥 ALL-IN!';
             } else if (action === 'raise') {
-                if (p.chips < raiseVal) { alert('No tenés tantas fichas'); return; }
+                if (p.chips < raiseVal) { alert('No tenés tantas fichas en tu stack'); return; }
                 p.chips -= raiseVal;
                 p.bet += raiseVal;
                 gameState.pot += raiseVal;
@@ -258,7 +250,7 @@
             document.getElementById('my-chips-display').innerText = me.chips;
             document.getElementById('my-bet-display').innerText = me.bet;
 
-            // Render table seats
+            // Render Mesa
             let seatsHtml = '';
             gameState.players.forEach(p => {
                 seatsHtml += `
@@ -272,7 +264,7 @@
             });
             document.getElementById('table-seats').innerHTML = seatsHtml;
 
-            // Render chips list view
+            // Render Fichas & Lista
             let listHtml = '';
             gameState.players.forEach(p => {
                 listHtml += `
