@@ -1,855 +1,297 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker Chip & Action Manager - Mesa En Vivo</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        felt: {
-                            dark: '#0f291e',
-                            DEFAULT: '#134e32',
-                            light: '#1b6b44'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Poker Chip & Action Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .table-glow { box-shadow: 0 0 50px rgba(19, 78, 50, 0.5), inset 0 0 40px rgba(0,0,0,0.6); }
-        .chip-stack { box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
+        .felt-bg { background: radial-gradient(circle, #064e3b 0%, #022c22 100%); }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen flex flex-col justify-between">
 
-    <!-- Custom Notification / Message Modal -->
-    <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center">
-            <div id="modal-icon" class="text-4xl mb-3 text-amber-400"><i class="fa-solid fa-circle-exclamation"></i></div>
-            <h3 id="modal-title" class="text-xl font-bold mb-2">Aviso</h3>
-            <p id="modal-message" class="text-slate-300 text-sm mb-6">Mensaje del sistema.</p>
-            <button onclick="closeModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-semibold py-2.5 px-4 rounded-xl transition shadow-lg shadow-emerald-900/30">Entendido</button>
+    <!-- HEADER / LOBBY STATUS -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <span class="text-2xl">🃏</span>
+            <h1 class="font-bold text-lg text-emerald-400">Poker Chip Live</h1>
         </div>
-    </div>
-
-    <!-- Header / Navbar -->
-    <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-40 px-4 py-3">
-        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-900/50">
-                    <i class="fa-solid fa-coins"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
-                        PokerChips Live <span id="room-badge" class="text-xs bg-emerald-900/80 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-700/50 hidden">Sala: <span id="display-room-code">----</span></span>
-                    </h1>
-                    <p class="text-xs text-slate-400">Cartas físicas en mesa • Fichas y apuestas digitales</p>
-                </div>
-            </div>
-
-            <div id="app-nav-controls" class="hidden flex items-center gap-2">
-                <!-- View Mode Toggle -->
-                <div class="bg-slate-800 p-1 rounded-xl flex gap-1 border border-slate-700">
-                    <button onclick="switchView('table')" id="btn-view-table" class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-emerald-600 text-white shadow">
-                        <i class="fa-solid fa-circle-nodes"></i> Mesa & Asientos
-                    </button>
-                    <button onclick="switchView('chips')" id="btn-view-chips" class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white">
-                        <i class="fa-solid fa-layer-group"></i> Fichas & Acciones
-                    </button>
-                </div>
-                <button onclick="leaveRoom()" class="bg-rose-900/40 hover:bg-rose-900/70 border border-rose-700/50 text-rose-300 px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1">
-                    <i class="fa-solid fa-right-from-bracket"></i> Salir
-                </button>
-            </div>
+        <div id="room-info" class="hidden flex items-center space-x-4 text-sm">
+            <span class="bg-gray-800 px-3 py-1 rounded-full border border-gray-700">Sala: <strong id="lbl-room" class="text-emerald-400"></strong></span>
+            <span class="bg-gray-800 px-3 py-1 rounded-full border border-gray-700">Jugador: <strong id="lbl-player" class="text-amber-400"></strong></span>
+            <button onclick="leaveRoom()" class="bg-red-600/80 hover:bg-red-600 text-white px-3 py-1 rounded font-semibold transition">Salir</button>
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col justify-center">
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow p-4 max-w-6xl mx-auto w-full">
 
         <!-- LOBBY SCREEN -->
-        <div id="screen-lobby" class="max-w-xl mx-auto w-full py-8">
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-                <div class="absolute -right-16 -top-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                
-                <h2 class="text-2xl font-bold mb-1 text-center">Gestor de Fichas de Poker</h2>
-                <p class="text-slate-400 text-sm text-center mb-6">Organiza tus partidas presenciales con control digital de fichas y apuestas en tiempo real.</p>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Tu Nombre / Apodo</label>
-                        <input type="text" id="input-player-name" placeholder="Ej. Juan Poker" maxlength="15" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-500 transition">
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Código de Sala</label>
-                            <input type="text" id="input-room-code" placeholder="Ej. MESA123" maxlength="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 uppercase tracking-widest font-mono focus:outline-none focus:border-emerald-500 transition">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Fichas Iniciales (Buy-in)</label>
-                            <select id="select-starting-stack" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-500 transition">
-                                <option value="50">50 Fichas</option>
-                                <option value="100">100 Fichas</option>
-                                <option value="200" selected>200 Fichas</option>
-                                <option value="500">500 Fichas</option>
-                                <option value="1000">1000 Fichas</option>
-                                <option value="2500">2500 Fichas</option>
-                                <option value="5000">5000 Fichas</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="pt-4 flex flex-col sm:flex-row gap-3">
-                        <button onclick="createOrJoinRoom('create')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-plus-circle"></i> Crear Sala Nueva
-                        </button>
-                        <button onclick="createOrJoinRoom('join')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-right-to-bracket"></i> Unirse a Sala
-                        </button>
-                    </div>
+        <div id="screen-lobby" class="max-w-md mx-auto bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl mt-10">
+            <h2 class="text-xl font-bold text-center mb-6 text-emerald-400">Gestor de Fichas de Poker</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Tu Apodo</label>
+                    <input type="text" id="input-name" placeholder="Ej. Ismael" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500">
                 </div>
 
-                <div class="mt-8 pt-6 border-t border-slate-800/85 text-xs text-slate-400 space-y-2">
-                    <div class="flex items-center gap-2 text-emerald-400 font-medium">
-                        <i class="fa-solid fa-circle-info"></i> Nota sobre las cartas:
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-gray-400 mb-1">Fichas Iniciales (Buy-in)</label>
+                    <select id="select-buyin" class="w-full bg-gray-950 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500">
+                        <option value="50">50 Fichas</option>
+                        <option value="100" selected>100 Fichas</option>
+                        <option value="200">200 Fichas</option>
+                        <option value="500">500 Fichas</option>
+                        <option value="1000">1000 Fichas</option>
+                        <option value="5000">5000 Fichas</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 border-t border-gray-800 flex flex-col space-y-3">
+                    <button onclick="createRoom()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold p-3 rounded-lg shadow transition">Crear Nueva Sala</button>
+                    <div class="flex space-x-2">
+                        <input type="text" id="input-room-code" placeholder="Código de Sala" class="w-1/2 bg-gray-950 border border-gray-700 rounded-lg p-3 text-white uppercase tracking-widest text-center focus:outline-none focus:border-emerald-500">
+                        <button onclick="joinRoom()" class="w-1/2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-emerald-500/50 font-bold p-3 rounded-lg shadow transition">Unirse</button>
                     </div>
-                    <p>Las cartas se reparten <strong>físicamente en la mesa</strong>. Esta aplicación gestiona exclusivamente las fichas, apuestas, botes, turnos, ciegas y acciones (igualar, subir, all-in, retirarse).</p>
                 </div>
             </div>
         </div>
 
-        <!-- APP GAME ROOM (HIDDEN UNTIL JOINED) -->
-        <div id="screen-game" class="hidden flex-col gap-4 w-full">
+        <!-- GAME INTERFACE (HIDDEN BY DEFAULT) -->
+        <div id="screen-game" class="hidden space-y-6">
+            
+            <!-- MODE SWITCHER TABS -->
+            <div class="flex justify-center space-x-2 bg-gray-900 p-1.5 rounded-xl border border-gray-800 max-w-md mx-auto">
+                <button onclick="switchMode('table')" id="btn-mode-table" class="flex-1 py-2 px-4 rounded-lg font-bold text-sm bg-emerald-600 text-white transition">🟢 Modo Mesa</button>
+                <button onclick="switchMode('chips')" id="btn-mode-chips" class="flex-1 py-2 px-4 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition">🪙 Modo Fichas & Acciones</button>
+            </div>
 
-            <!-- TABLE STATS / TOP BAR -->
-            <div class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-                <div class="flex items-center gap-6">
-                    <div>
-                        <span class="text-xs text-slate-400 block uppercase tracking-wider">Bote Principal</span>
-                        <span id="stat-pot" class="text-2xl md:text-3xl font-extrabold text-amber-400">0</span>
-                    </div>
-                    <div class="h-8 w-px bg-slate-800"></div>
-                    <div>
-                        <span class="text-xs text-slate-400 block uppercase tracking-wider">Apuesta Máxima Actual</span>
-                        <span id="stat-current-bet" class="text-xl md:text-2xl font-bold text-emerald-400">0</span>
-                    </div>
-                    <div class="h-8 w-px bg-slate-800 hidden sm:block"></div>
-                    <div class="hidden sm:block">
-                        <span class="text-xs text-slate-400 block uppercase tracking-wider">Mano / Ronda</span>
-                        <span id="stat-round" class="text-lg font-semibold text-slate-200">Pre-Flop</span>
-                    </div>
+            <!-- TABLE VIEW -->
+            <div id="view-table" class="felt-bg border-4 border-amber-900/60 rounded-3xl p-6 shadow-2xl min-h-[450px] relative flex flex-col items-center justify-between">
+                <div class="bg-black/40 backdrop-blur border border-white/10 px-6 py-2 rounded-full text-center">
+                    <p class="text-xs uppercase text-emerald-300 font-bold">Bote Acumulado en la Mesa</p>
+                    <p id="pot-display" class="text-3xl font-black text-amber-400">0 fichas</p>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <button onclick="openAddChipsModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-2 rounded-xl font-medium transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-coins text-amber-400"></i> Recargar Fichas
-                    </button>
-                    <button onclick="nextRound()" class="bg-emerald-900/60 hover:bg-emerald-800 border border-emerald-700/60 text-emerald-300 text-xs px-3 py-2 rounded-xl font-medium transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-forward"></i> Siguiente Ronda
-                    </button>
-                    <button onclick="resetTable()" class="bg-rose-900/40 hover:bg-rose-900/70 border border-rose-700/50 text-rose-300 text-xs px-3 py-2 rounded-xl font-medium transition" title="Reiniciar Mesa">
-                        <i class="fa-solid fa-rotate-right"></i>
-                    </button>
+                <!-- PLAYERS SEATS GRID -->
+                <div id="table-seats" class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full my-6">
+                    <!-- Generado dinámicamente -->
+                </div>
+
+                <div class="text-center text-xs text-emerald-200/60 bg-black/30 px-4 py-1.5 rounded-lg">
+                    ℹ️ Las cartas se reparten de forma presencial. Esta pantalla lleva el control de ciegas, apuestas y fichas.
                 </div>
             </div>
 
-            <!-- VIEW MODE 1: TABLE & SEATS VIEW -->
-            <div id="view-mode-table" class="w-full flex flex-col items-center justify-center py-6">
-                <div class="relative w-full max-w-4xl h-[480px] md:h-[540px] rounded-[180px] bg-gradient-to-b from-felt-dark via-felt to-felt-dark table-glow border-8 border-amber-900/60 flex items-center justify-center shadow-2xl overflow-hidden my-4">
-                    <!-- Felt Center Branding & Pot info -->
-                    <div class="absolute z-10 flex flex-col items-center text-center p-6 bg-black/30 backdrop-blur-sm rounded-3xl border border-white/10">
-                        <span class="text-xs uppercase tracking-widest text-emerald-300 font-bold mb-1">Bote en Mesa</span>
-                        <span id="table-center-pot" class="text-3xl md:text-4xl font-black text-amber-400 mb-2">0</span>
-                        <div class="flex gap-2 text-xs text-slate-300">
-                            <span class="bg-black/40 px-2.5 py-1 rounded-lg border border-white/5">Apuesta: <strong id="table-center-bet" class="text-emerald-400">0</strong></span>
-                            <span class="bg-black/40 px-2.5 py-1 rounded-lg border border-white/5">Fase: <strong id="table-center-round" class="text-slate-100">Pre-Flop</strong></span>
-                        </div>
+            <!-- CHIPS & ACTIONS VIEW -->
+            <div id="view-chips" class="hidden bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl max-w-2xl mx-auto space-y-6">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+                    <div>
+                        <p class="text-xs uppercase text-gray-400">Tus Fichas Actuales (Stack)</p>
+                        <p id="my-chips-display" class="text-3xl font-black text-emerald-400">100</p>
                     </div>
-
-                    <!-- Dynamic Seats Container -->
-                    <div id="table-seats-container" class="absolute inset-0">
-                        <!-- Seats generated via JS -->
+                    <div>
+                        <p class="text-xs uppercase text-gray-400">Tu Apuesta Actual</p>
+                        <p id="my-bet-display" class="text-3xl font-black text-amber-400">0</p>
                     </div>
                 </div>
 
-                <!-- Quick Action Bar below table for Mode 1 -->
-                <div class="w-full max-w-3xl bg-slate-900/90 border border-slate-800 rounded-2xl p-4 mt-2 shadow-xl flex flex-wrap items-center justify-between gap-3">
-                    <div class="text-xs text-slate-400">
-                        Tu Turno: <span id="turn-indicator" class="font-bold text-emerald-400">Esperando...</span>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="playerAction('fold')" class="bg-rose-900/40 hover:bg-rose-900/60 border border-rose-700/50 text-rose-200 font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow">
-                            <i class="fa-solid fa-user-slash mr-1"></i> Retirarse (Fold)
-                        </button>
-                        <button onclick="playerAction('check_call')" id="btn-check-call" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow">
-                            <i class="fa-solid fa-check mr-1"></i> Igualar / Pasar
-                        </button>
-                        <button onclick="openRaiseModal()" class="bg-emerald-600 hover:bg-emerald-500 font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow shadow-emerald-900/40">
-                            <i class="fa-solid fa-arrow-trend-up mr-1"></i> Subir (Raise)
-                        </button>
-                        <button onclick="playerAction('allin')" class="bg-amber-600 hover:bg-amber-500 font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow shadow-amber-900/40 text-black">
-                            <i class="fa-solid fa-bolt mr-1"></i> All-In
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW MODE 2: CHIPS & BETTING MANAGEMENT VIEW -->
-            <div id="view-mode-chips" class="w-full hidden grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
-                
-                <!-- Left/Center: Detailed Player Chip Stacks & Status -->
-                <div class="lg:col-span-2 space-y-4">
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                        <h3 class="font-bold text-base mb-4 flex items-center justify-between">
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-users text-emerald-400"></i> Jugadores y Fichas en Sala</span>
-                            <span class="text-xs bg-slate-800 px-3 py-1 rounded-full text-slate-300 font-normal" id="player-count-badge">0 Jugadores</span>
-                        </h3>
-                        <div id="chips-players-list" class="space-y-3">
-                            <!-- Populated via JS -->
-                        </div>
-                    </div>
+                <!-- ACTION BUTTONS -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <button onclick="playerAction('fold')" class="bg-red-600 hover:bg-red-500 font-bold p-3 rounded-lg text-white transition">Irse (Fold)</button>
+                    <button onclick="playerAction('check')" class="bg-blue-600 hover:bg-blue-500 font-bold p-3 rounded-lg text-white transition">Pasar (Check)</button>
+                    <button onclick="playerAction('call')" class="bg-amber-600 hover:bg-amber-500 font-bold p-3 rounded-lg text-white transition">Igualar (Call)</button>
+                    <button onclick="playerAction('allin')" class="bg-purple-600 hover:bg-purple-500 font-bold p-3 rounded-lg text-white transition">All-In 🔥</button>
                 </div>
 
-                <!-- Right: Action Control Panel -->
-                <div class="space-y-4">
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl sticky top-20">
-                        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-gamepad text-emerald-400"></i> Panel de Acciones
-                        </h3>
-
-                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 mb-4 text-center">
-                            <span class="text-xs text-slate-400 block mb-1">Tu Estado Actual</span>
-                            <span id="panel-my-status" class="text-sm font-bold text-emerald-400 uppercase tracking-wide">Activo</span>
-                        </div>
-
-                        <div class="space-y-2.5">
-                            <button onclick="playerAction('fold')" class="w-full bg-rose-900/30 hover:bg-rose-900/50 border border-rose-700/50 text-rose-200 font-semibold py-3 px-4 rounded-xl transition text-sm flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-circle-xmark"></i> Retirarse (Fold)
-                            </button>
-                            <button onclick="playerAction('check_call')" id="panel-btn-check-call" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold py-3 px-4 rounded-xl transition text-sm flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-check"></i> Igualar / Pasar
-                            </button>
-                            <button onclick="openRaiseModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-semibold py-3 px-4 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950">
-                                <i class="fa-solid fa-arrow-trend-up"></i> Subir Apuesta (Raise)
-                            </button>
-                            <button onclick="playerAction('allin')" class="w-full bg-amber-600 hover:bg-amber-500 text-black font-bold py-3 px-4 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-950">
-                                <i class="fa-solid fa-bolt"><b>ALL-IN</b></i>
-                            </button>
-                        </div>
-
-                        <div class="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-400 space-y-1.5">
-                            <p><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> Las fichas se descuentan de tu stack al igualar o subir.</p>
-                            <p><i class="fa-solid fa-circle-info text-emerald-400 mr-1"></i> Las cartas físicas las reparte el cruza-mesa de tu partida en persona.</p>
-                        </div>
-                    </div>
+                <!-- RAISE CONTROLS -->
+                <div class="flex space-x-2 pt-2">
+                    <input type="number" id="raise-amount" value="10" min="1" class="w-2/3 bg-gray-950 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500">
+                    <button onclick="playerAction('raise')" class="w-1/3 bg-emerald-600 hover:bg-emerald-500 font-bold p-3 rounded-lg text-white transition">Subir (Raise)</button>
                 </div>
 
+                <!-- PLAYER LIST -->
+                <div class="border-t border-gray-800 pt-4">
+                    <h3 class="text-sm font-bold text-gray-400 mb-3">Estado de la Mesa en Tiempo Real</h3>
+                    <div id="players-list-chips" class="space-y-2">
+                        <!-- Generado dinámicamente -->
+                    </div>
+                </div>
             </div>
 
         </div>
 
     </main>
 
-    <!-- RAISE MODAL -->
-    <div id="modal-raise" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-arrow-trend-up text-emerald-400"></i> Subir Apuesta
-            </h3>
-            <p class="text-xs text-slate-400 mb-4">Ingresa el monto total o adicional que deseas apostar.</p>
-            
-            <div class="mb-4">
-                <input type="number" id="input-raise-amount" min="1" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 font-bold text-lg focus:outline-none focus:border-emerald-500 transition" placeholder="Monto">
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                <button onclick="addRaiseQuick(10)" class="bg-slate-800 hover:bg-slate-700 text-xs py-2 rounded-lg border border-slate-700 font-semibold">+10</button>
-                <button onclick="addRaiseQuick(50)" class="bg-slate-800 hover:bg-slate-700 text-xs py-2 rounded-lg border border-slate-700 font-semibold">+50</button>
-                <button onclick="addRaiseQuick(100)" class="bg-slate-800 hover:bg-slate-700 text-xs py-2 rounded-lg border border-slate-700 font-semibold">+100</button>
-            </div>
-
-            <div class="flex gap-2">
-                <button onclick="closeRaiseModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl text-sm font-semibold transition">Cancelar</button>
-                <button onclick="confirmRaise()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-950">Apostar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ADD CHIPS MODAL -->
-    <div id="modal-add-chips" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-coins text-amber-400"></i> Recargar Fichas (Buy-in Adicional)
-            </h3>
-            <p class="text-xs text-slate-400 mb-4">Añade más fichas a tu stack actual.</p>
-            
-            <div class="mb-4">
-                <input type="number" id="input-add-chips-amount" value="100" min="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 font-bold text-lg focus:outline-none focus:border-emerald-500 transition" placeholder="Cantidad">
-            </div>
-
-            <div class="flex gap-2">
-                <button onclick="closeAddChipsModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl text-sm font-semibold transition">Cancelar</button>
-                <button onclick="confirmAddChips()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-black py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-amber-950">Recargar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="text-center py-4 text-xs text-slate-400 border-t border-slate-900">
-        PokerChips Tracker • Multijugador Real-Time & Mesa en Vivo
-    </footer>
-
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global Firebase configuration
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'poker-tracker-live-app';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "AIzaSyDummyKeyForLocalSandboxTesting",
-            authDomain: "dummy-project.firebaseapp.com",
-            projectId: "dummy-project"
+    <!-- FOOTER SCRIPT DE SINCRONIZACIÓN -->
+    <script>
+        let gameState = {
+            roomCode: null,
+            playerName: null,
+            buyIn: 100,
+            players: [],
+            pot: 0
         };
 
-        let app, db, auth;
-        let currentUser = null;
-        let currentRoomCode = null;
-        let unsubscribeRoom = null;
-        let localPlayerName = "";
-        let currentView = "table";
-
-        // Initialize Firebase
-        try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
-            if (initialAuthToken) {
-                signInWithCustomToken(auth, initialAuthToken).catch(() => signInAnonymously(auth));
-            } else {
-                signInAnonymously(auth).catch(err => console.error("Auth error:", err));
-            }
-
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                }
-            });
-        } catch (e) {
-            console.error("Firebase init error:", e);
+        function generateCode() {
+            return Math.random().toString(36.substring(2, 6)).toUpperCase().slice(-4);
         }
 
-        // UI Helpers
-        window.showModal = function(title, message, iconClass = "fa-solid fa-circle-exclamation text-amber-400") {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-message').innerText = message;
-            document.getElementById('modal-icon').innerHTML = `<i class="${iconClass}"></i>`;
-            document.getElementById('modal-container').classList.remove('hidden');
-        }
-
-        window.closeModal = function() {
-            document.getElementById('modal-container').classList.add('hidden');
-        }
-
-        window.switchView = function(view) {
-            currentView = view;
-            const tableEl = document.getElementById('view-mode-table');
-            const chipsEl = document.getElementById('view-mode-chips');
-            const btnTable = document.getElementById('btn-view-table');
-            const btnChips = document.getElementById('btn-view-chips');
-
-            if (view === 'table') {
-                tableEl.classList.remove('hidden');
-                chipsEl.classList.add('hidden');
-                btnTable.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-emerald-600 text-white shadow";
-                btnChips.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white";
-            } else {
-                tableEl.classList.add('hidden');
-                chipsEl.classList.remove('hidden');
-                btnChips.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-emerald-600 text-white shadow";
-                btnTable.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white";
-            }
-        }
-
-        // Room Creation / Joining
-        window.createOrJoinRoom = async function(mode) {
-            const nameInput = document.getElementById('input-player-name').value.trim();
-            const roomInput = document.getElementById('input-room-code').value.trim().toUpperCase();
-            const startingStack = parseInt(document.getElementById('select-starting-stack').value) || 200;
-
-            if (!nameInput) {
-                showModal("Nombre requerido", "Por favor ingresa tu nombre o apodo para unirte a la mesa.");
-                return;
-            }
-            if (!roomInput) {
-                showModal("Código requerido", "Por favor ingresa un código de sala válido (ej. MESA1).");
-                return;
-            }
-
-            localPlayerName = nameInput;
-            currentRoomCode = roomInput;
-
-            if (!currentUser) {
-                showModal("Conectando", "Esperando autenticación con el servidor, intenta de nuevo en un segundo.");
-                return;
-            }
-
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', `poker_room_${currentRoomCode}`);
+        function createRoom() {
+            const name = document.getElementById('input-name').value.trim();
+            if (!name) { alert('Por favor ingresá tu apodo'); return; }
             
-            try {
-                const snap = await getDoc(roomRef);
-                const userId = currentUser.uid;
+            gameState.playerName = name;
+            gameState.buyIn = parseInt(document.getElementById('select-buyin').value);
+            gameState.roomCode = "MESA-" + generateCode();
+            
+            gameState.players = [{
+                name: name,
+                chips: gameState.buyIn,
+                bet: 0,
+                status: 'Activo'
+            }];
 
-                let roomData;
-                if (!snap.exists() || mode === 'create') {
-                    // Create new room
-                    roomData = {
-                        createdAt: Date.now(),
-                        pot: 0,
-                        currentMaxBet: 0,
-                        roundName: 'Pre-Flop',
-                        players: {
-                            [userId]: {
-                                id: userId,
-                                name: localPlayerName,
-                                stack: startingStack,
-                                currentBet: 0,
-                                status: 'Activo', // Activo, Fold, All-In
-                                seatIndex: 0,
-                                isHost: true
-                            }
-                        }
-                    };
-                    await setDoc(roomRef, roomData);
-                } else {
-                    // Join existing room
-                    roomData = snap.data();
-                    if (!roomData.players) roomData.players = {};
+            saveAndEnter();
+        }
 
-                    // Check if player already exists
-                    let assignedSeat = 0;
-                    const existingKeys = Object.keys(roomData.players);
-                    if (existingKeys.length >= 8) {
-                        showModal("Sala Llena", "La mesa ya tiene el máximo de 8 jugadores permitidos.");
-                        return;
-                    }
+        function joinRoom() {
+            const name = document.getElementById('input-name').value.trim();
+            const code = document.getElementById('input-room-code').value.trim().toUpperCase();
+            if (!name || !code) { alert('Ingresá tu apodo y el código de sala'); return; }
 
-                    // Find first available seat index 0 to 7
-                    const takenSeats = Object.values(roomData.players).map(p => p.seatIndex);
-                    for (let i = 0; i < 8; i++) {
-                        if (!takenSeats.includes(i)) {
-                            assignedSeat = i;
-                            break;
-                        }
-                    }
+            gameState.playerName = name;
+            gameState.roomCode = code;
 
-                    roomData.players[userId] = {
-                        id: userId,
-                        name: localPlayerName,
-                        stack: startingStack,
-                        currentBet: 0,
-                        status: 'Activo',
-                        seatIndex: assignedSeat,
-                        isHost: false
-                    };
-
-                    await setDoc(roomRef, roomData);
+            let loaded = localStorage.getItem('poker_room_' + code);
+            if (loaded) {
+                gameState = JSON.parse(loaded);
+                // Chequear si ya está
+                let existing = gameState.players.find(p => p.name === name);
+                if (!existing) {
+                    gameState.players.push({ name: name, chips: gameState.buyIn || 100, bet: 0, status: 'Activo' });
                 }
+            } else {
+                gameState.buyIn = 100;
+                gameState.players = [{ name: name, chips: 100, bet: 0, status: 'Activo' }];
+            }
 
-                // Switch UI screens
-                document.getElementById('screen-lobby').classList.add('hidden');
-                document.getElementById('screen-game').classList.remove('hidden');
-                document.getElementById('app-nav-controls').classList.remove('hidden');
-                document.getElementById('room-badge').classList.remove('hidden');
-                document.getElementById('display-room-code').innerText = currentRoomCode;
+            saveAndEnter();
+        }
 
-                subscribeToRoom(roomRef);
+        function saveAndEnter() {
+            localStorage.setItem('poker_room_' + gameState.roomCode, JSON.stringify(gameState));
+            
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('room-info').classList.remove('hidden');
+            
+            document.getElementById('lbl-room').innerText = gameState.roomCode;
+            document.getElementById('lbl-player').innerText = gameState.playerName;
 
-            } catch (err) {
-                console.error("Error joining room:", err);
-                showModal("Error", "No se pudo conectar a la sala: " + err.message);
+            updateUI();
+            setInterval(pollRoom, 1000); // Sincronización en vivo local
+        }
+
+        function pollRoom() {
+            if (!gameState.roomCode) return;
+            let loaded = localStorage.getItem('poker_room_' + gameState.roomCode);
+            if (loaded) {
+                gameState = JSON.parse(loaded);
+                updateUI();
             }
         }
 
-        function subscribeToRoom(roomRef) {
-            if (unsubscribeRoom) unsubscribeRoom();
+        function syncAndSave() {
+            localStorage.setItem('poker_room_' + gameState.roomCode, JSON.stringify(gameState));
+            updateUI();
+        }
 
-            unsubscribeRoom = onSnapshot(roomRef, (docSnap) => {
-                if (!docSnap.exists()) {
-                    showModal("Sala Cerrada", "El anfitrión ha cerrado la sala o la sesión expiró.");
-                    leaveRoom();
-                    return;
-                }
+        function switchMode(mode) {
+            if (mode === 'table') {
+                document.getElementById('view-table').classList.remove('hidden');
+                document.getElementById('view-chips').classList.add('hidden');
+                document.getElementById('btn-mode-table').className = "flex-1 py-2 px-4 rounded-lg font-bold text-sm bg-emerald-600 text-white transition";
+                document.getElementById('btn-mode-chips').className = "flex-1 py-2 px-4 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition";
+            } else {
+                document.getElementById('view-table').classList.add('hidden');
+                document.getElementById('view-chips').classList.remove('hidden');
+                document.getElementById('btn-mode-chips').className = "flex-1 py-2 px-4 rounded-lg font-bold text-sm bg-emerald-600 text-white transition";
+                document.getElementById('btn-mode-table').className = "flex-1 py-2 px-4 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition";
+            }
+        }
 
-                const data = docSnap.data();
-                renderGame(data);
-            }, (error) => {
-                console.error("Subscription error:", error);
+        function playerAction(action) {
+            let p = gameState.players.find(x => x.name === gameState.playerName);
+            if (!p) return;
+
+            let raiseVal = parseInt(document.getElementById('raise-amount').value) || 10;
+
+            if (action === 'fold') {
+                p.status = 'Retirado (Fold)';
+            } else if (action === 'check') {
+                p.status = 'Pasó (Check)';
+            } else if (action === 'call') {
+                p.status = 'Igualó (Call)';
+            } else if (action === 'allin') {
+                p.bet += p.chips;
+                gameState.pot += p.chips;
+                p.chips = 0;
+                p.status = '🔥 ALL-IN!';
+            } else if (action === 'raise') {
+                if (p.chips < raiseVal) { alert('No tenés tantas fichas'); return; }
+                p.chips -= raiseVal;
+                p.bet += raiseVal;
+                gameState.pot += raiseVal;
+                p.status = `Subió +${raiseVal}`;
+            }
+
+            syncAndSave();
+        }
+
+        function updateUI() {
+            document.getElementById('pot-display').innerText = gameState.pot + " fichas";
+            
+            let me = gameState.players.find(x => x.name === gameState.playerName) || { chips: 0, bet: 0 };
+            document.getElementById('my-chips-display').innerText = me.chips;
+            document.getElementById('my-bet-display').innerText = me.bet;
+
+            // Render table seats
+            let seatsHtml = '';
+            gameState.players.forEach(p => {
+                seatsHtml += `
+                    <div class="bg-gray-900/90 border border-emerald-500/30 rounded-xl p-3 text-center shadow">
+                        <p class="font-bold text-emerald-400 truncate">${p.name}</p>
+                        <p class="text-xs text-amber-400 font-semibold">${p.chips} fichas</p>
+                        <p class="text-[10px] bg-gray-950/60 rounded px-1 mt-1 text-gray-300">Apuesta: ${p.bet}</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">${p.status}</p>
+                    </div>
+                `;
             });
-        }
+            document.getElementById('table-seats').innerHTML = seatsHtml;
 
-        window.leaveRoom = function() {
-            if (unsubscribeRoom) {
-                unsubscribeRoom();
-                unsubscribeRoom = null;
-            }
-            if (currentRoomCode && currentUser) {
-                // Optionally remove player from room
-                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', `poker_room_${currentRoomCode}`);
-                getDoc(roomRef).then(snap => {
-                    if (snap.exists()) {
-                        const data = snap.data();
-                        if (data.players && data.players[currentUser.uid]) {
-                            delete data.players[currentUser.uid];
-                            // If empty, delete room or keep
-                            if (Object.keys(data.players).length === 0) {
-                                deleteDoc(roomRef);
-                            } else {
-                                setDoc(roomRef, data);
-                            }
-                        }
-                    }
-                }).catch(err => console.error(err));
-            }
-
-            currentRoomCode = null;
-            document.getElementById('screen-game').classList.add('hidden');
-            document.getElementById('app-nav-controls').classList.add('hidden');
-            document.getElementById('room-badge').classList.add('hidden');
-            document.getElementById('screen-lobby').classList.remove('hidden');
-        }
-
-        // Render Game State
-        function renderGame(data) {
-            const playersMap = data.players || {};
-            const playersArr = Object.values(playersMap);
-            const userId = currentUser ? currentUser.uid : '';
-
-            // Update Top Bar Stats
-            document.getElementById('stat-pot').innerText = data.pot || 0;
-            document.getElementById('stat-current-bet').innerText = data.currentMaxBet || 0;
-            document.getElementById('stat-round').innerText = data.roundName || 'Pre-Flop';
-            document.getElementById('table-center-pot').innerText = data.pot || 0;
-            document.getElementById('table-center-bet').innerText = data.currentMaxBet || 0;
-            document.getElementById('table-center-round').innerText = data.roundName || 'Pre-Flop';
-            document.getElementById('player-count-badge').innerText = `${playersArr.length} Jugadores`;
-
-            // My player info
-            const me = playersMap[userId];
-            if (me) {
-                document.getElementById('panel-my-status').innerText = me.status || 'Activo';
-                const callNeeded = (data.currentMaxBet || 0) - (me.currentBet || 0);
-                const checkCallBtnText = callNeeded > 0 ? `Igualar (${callNeeded})` : `Pasar (Check)`;
-                document.getElementById('btn-check-call').innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${checkCallBtnText}`;
-                document.getElementById('panel-btn-check-call').innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${checkCallBtnText}`;
-                document.getElementById('turn-indicator').innerText = me.status === 'Fold' ? 'Retirado' : (callNeeded > 0 ? `Debes igualar ${callNeeded}` : 'Al día');
-            }
-
-            // Render Table Seats (Circular layout for up to 8 players)
-            renderTableSeats(playersArr, userId, data.currentMaxBet || 0);
-
-            // Render Chips & Betting View Players List
-            renderChipsPlayersList(playersArr, userId, data.currentMaxBet || 0);
-        }
-
-        function renderTableSeats(players, myUserId, currentMaxBet) {
-            const container = document.getElementById('table-seats-container');
-            container.innerHTML = '';
-
-            // 8 fixed seat coordinates around the oval table (percentages)
-            // Angles around ellipse
-            const positions = [
-                { bottom: '2%', left: '42%' },   // 0: Bottom center
-                { bottom: '15%', left: '15%' },  // 1: Bottom left
-                { top: '40%', left: '2%' },      // 2: Left
-                { top: '15%', left: '15%' },     // 3: Top left
-                { top: '2%', left: '42%' },      // 4: Top center
-                { top: '15%', right: '15%' },    // 5: Top right
-                { top: '40%', right: '2%' },     // 6: Right
-                { bottom: '15%', right: '15%' }  // 7: Bottom right
-            ];
-
-            // Sort players by seatIndex to keep consistency
-            players.forEach(p => {
-                const pos = positions[p.seatIndex % 8];
-                const isMe = p.id === myUserId;
-                const callNeeded = currentMaxBet - p.currentBet;
-
-                const seatDiv = document.createElement('div');
-                seatDiv.className = `absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all`;
-                
-                // Apply inline positioning
-                if (pos.bottom) seatDiv.style.bottom = pos.bottom;
-                if (pos.top) seatDiv.style.top = pos.top;
-                if (pos.left) seatDiv.style.left = pos.left;
-                if (pos.right) seatDiv.style.right = pos.right;
-
-                let statusBadgeColor = 'bg-emerald-600/90 text-white';
-                if (p.status === 'Fold') statusBadgeColor = 'bg-rose-900/90 text-rose-200 line-through';
-                if (p.status === 'All-In') statusBadgeColor = 'bg-amber-500 text-black font-extrabold';
-
-                seatDiv.innerHTML = `
-                    <div class="bg-slate-900/95 border ${isMe ? 'border-emerald-500 shadow-emerald-500/30' : 'border-slate-700'} rounded-2xl p-2.5 w-32 md:w-36 shadow-xl backdrop-blur text-center relative">
-                        ${p.isHost ? '<span class="absolute -top-2 -right-2 bg-amber-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow" title="Host">HOST</span>' : ''}
-                        <div class="font-bold text-xs truncate ${isMe ? 'text-emerald-400' : 'text-slate-200'}">${escapeHtml(p.name)} ${isMe ? '(Tú)' : ''}</div>
-                        <div class="text-amber-400 font-extrabold text-sm my-0.5"><i class="fa-solid fa-coins text-xs mr-1"></i>${p.stack}</div>
-                        <div class="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800 pt-1 mt-1">
-                            <span>Apuesta: <strong class="text-emerald-300">${p.currentBet}</strong></span>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] ${statusBadgeColor}">${p.status}</span>
+            // Render chips list view
+            let listHtml = '';
+            gameState.players.forEach(p => {
+                listHtml += `
+                    <div class="flex justify-between items-center bg-gray-950 p-3 rounded-lg border border-gray-800 text-sm">
+                        <span class="font-bold text-white">${p.name}</span>
+                        <div class="space-x-3 text-xs">
+                            <span class="text-amber-400 font-semibold">Fichas: ${p.chips}</span>
+                            <span class="text-gray-400">Apuesta: ${p.bet}</span>
+                            <span class="bg-gray-800 px-2 py-1 rounded text-emerald-300">${p.status}</span>
                         </div>
                     </div>
                 `;
-                container.appendChild(seatDiv);
             });
+            document.getElementById('players-list-chips').innerHTML = listHtml;
         }
 
-        function renderChipsPlayersList(players, myUserId, currentMaxBet) {
-            const listEl = document.getElementById('chips-players-list');
-            listEl.innerHTML = '';
-
-            players.forEach(p => {
-                const isMe = p.id === myUserId;
-                const callNeeded = currentMaxBet - p.currentBet;
-                
-                const item = document.createElement('div');
-                item.className = `bg-slate-950 border ${isMe ? 'border-emerald-600/60' : 'border-slate-800'} rounded-xl p-4 flex flex-wrap items-center justify-between gap-3`;
-                
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl ${isMe ? 'bg-emerald-600' : 'bg-slate-800'} flex items-center justify-center font-bold text-sm shadow">
-                            ${escapeHtml(p.name.substring(0, 2).toUpperCase())}
-                        </div>
-                        <div>
-                            <div class="font-bold text-sm text-slate-100 flex items-center gap-2">
-                                ${escapeHtml(p.name)} ${isMe ? '<span class="text-xs bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded-full">Tú</span>' : ''}
-                                ${p.isHost ? '<span class="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">Host</span>' : ''}
-                            </div>
-                            <div class="text-xs text-slate-400">Estado: <span class="text-slate-200 font-medium">${p.status}</span></div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-4 text-right">
-                        <div>
-                            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Stack Fichas</span>
-                            <span class="text-amber-400 font-bold text-base"><i class="fa-solid fa-coins text-xs mr-1"></i>${p.stack}</span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Apuesta Actual</span>
-                            <span class="text-emerald-400 font-bold text-base">${p.currentBet}</span>
-                        </div>
-                    </div>
-                `;
-                listEl.appendChild(item);
-            });
-        }
-
-        // Poker Actions
-        window.playerAction = async function(actionType, raiseAmount = 0) {
-            if (!currentRoomCode || !currentUser) return;
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', `poker_room_${currentRoomCode}`);
-
-            try {
-                const snap = await getDoc(roomRef);
-                if (!snap.exists()) return;
-                const data = snap.data();
-                const userId = currentUser.uid;
-                const me = data.players[userId];
-
-                if (!me) return;
-                if (me.status === 'Fold') {
-                    showModal("Aviso", "Ya te has retirado en esta mano.");
-                    return;
-                }
-
-                let currentMaxBet = data.currentMaxBet || 0;
-
-                if (actionType === 'fold') {
-                    me.status = 'Fold';
-                } else if (actionType === 'check_call') {
-                    const callNeeded = currentMaxBet - me.currentBet;
-                    if (callNeeded > 0) {
-                        if (me.stack < callNeeded) {
-                            // All-in scenario due to insufficient chips
-                            data.pot = (data.pot || 0) + me.stack;
-                            me.currentBet += me.stack;
-                            me.stack = 0;
-                            me.status = 'All-In';
-                        } else {
-                            me.stack -= callNeeded;
-                            me.currentBet += callNeeded;
-                            data.pot = (data.pot || 0) + callNeeded;
-                            me.status = 'Activo';
-                        }
-                    } else {
-                        me.status = 'Activo'; // Check / Pass
-                    }
-                } else if (actionType === 'raise') {
-                    const totalTargetBet = parseInt(raiseAmount);
-                    const additionalNeeded = totalTargetBet - me.currentBet;
-
-                    if (isNaN(totalTargetBet) || additionalNeeded <= 0) {
-                        showModal("Monto Inválido", "El monto de subida debe ser mayor a tu apuesta actual y a la apuesta de la mesa.");
-                        return;
-                    }
-
-                    if (me.stack < additionalNeeded) {
-                        showModal("Fichas insuficientes", "No tienes suficientes fichas para esa subida. Usa All-In.");
-                        return;
-                    }
-
-                    me.stack -= additionalNeeded;
-                    me.currentBet += additionalNeeded;
-                    data.pot = (data.pot || 0) + additionalNeeded;
-                    me.status = 'Activo';
-
-                    if (me.currentBet > currentMaxBet) {
-                        data.currentMaxBet = me.currentBet;
-                    }
-                } else if (actionType === 'allin') {
-                    const allInAmount = me.stack;
-                    if (allInAmount <= 0) {
-                        showModal("Sin fichas", "No tienes fichas para apostar.");
-                        return;
-                    }
-                    me.stack = 0;
-                    me.currentBet += allInAmount;
-                    data.pot = (data.pot || 0) + allInAmount;
-                    me.status = 'All-In';
-
-                    if (me.currentBet > currentMaxBet) {
-                        data.currentMaxBet = me.currentBet;
-                    }
-                }
-
-                await setDoc(roomRef, data);
-            } catch (err) {
-                console.error("Action error:", err);
-            }
-        }
-
-        // Raise Modal Controls
-        window.openRaiseModal = function() {
-            document.getElementById('input-raise-amount').value = '';
-            document.getElementById('modal-raise').classList.remove('hidden');
-        }
-
-        window.closeRaiseModal = function() {
-            document.getElementById('modal-raise').classList.add('hidden');
-        }
-
-        window.addRaiseQuick = function(val) {
-            const input = document.getElementById('input-raise-amount');
-            const current = parseInt(input.value) || 0;
-            input.value = current + val;
-        }
-
-        window.confirmRaise = function() {
-            const amount = document.getElementById('input-raise-amount').value;
-            closeRaiseModal();
-            if (amount) {
-                playerAction('raise', amount);
-            }
-        }
-
-        // Add Chips Controls
-        window.openAddChipsModal = function() {
-            document.getElementById('modal-add-chips').classList.remove('hidden');
-        }
-
-        window.closeAddChipsModal = function() {
-            document.getElementById('modal-add-chips').classList.add('hidden');
-        }
-
-        window.confirmAddChips = async function() {
-            const amount = parseInt(document.getElementById('input-add-chips-amount').value) || 0;
-            closeAddChipsModal();
-
-            if (amount <= 0 || !currentRoomCode || !currentUser) return;
-
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', `poker_room_${currentRoomCode}`);
-            try {
-                const snap = await getDoc(roomRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    const me = data.players[currentUser.uid];
-                    if (me) {
-                        me.stack += amount;
-                        await setDoc(roomRef, data);
-                    }
-                }
-            } catch (err) {
-                console.error("Error adding chips:", err);
-            }
-        }
-
-        // Next Round / Hand Reset
-        window.nextRound = async function() {
-            if (!currentRoomCode) return;
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', `poker_room_${currentRoomCode}`);
-            try {
-                const snap = await getDoc(roomRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    // Cycle round name: Pre-Flop -> Flop -> Turn -> River -> Showdown
-                    const rounds = ['Pre-Flop', 'Flop', 'Turn', 'River', 'Showdown'];
-                    let currentIndex = rounds.indexOf(data.roundName || 'Pre-Flop');
-                    if (currentIndex === -1 || currentIndex >= rounds.length - 1) {
-                        currentIndex = 0; // Loop back or new hand
-                        // Reset player bets for new hand
-                        Object.values(data.players).forEach(p => {
-                            p.currentBet = 0;
-                            if (p.stack > 0) p.status = 'Activo';
-                        });
-                        data.pot = 0;
-                        data.currentMaxBet = 0;
-                    }
-                    data.roundName = rounds[currentIndex + 1] || 'Pre-Flop';
-                    await setDoc(roomRef, data);
-                }
-            } catch (err) {
-                console.error("Next round error:", err);
-            }
-        }
-
-        window.resetTable = async function() {
-            if (!currentRoomCode) return;
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', `poker_room_${currentRoomCode}`);
-            try {
-                const snap = await getDoc(roomRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    data.pot = 0;
-                    data.currentMaxBet = 0;
-                    data.roundName = 'Pre-Flop';
-                    Object.values(data.players).forEach(p => {
-                        p.currentBet = 0;
-                        p.status = 'Activo';
-                    });
-                    await setDoc(roomRef, data);
-                }
-            } catch (err) {
-                console.error("Reset error:", err);
-            }
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(q => "&#039;");
+        function leaveRoom() {
+            gameState.roomCode = null;
+            location.reload();
         }
     </script>
 </body>
